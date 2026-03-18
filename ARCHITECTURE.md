@@ -16,6 +16,7 @@ Recommended layout:
 - `sdks/typescript`
 - `sdks/python`
 - `sdks/php`
+- `sdks/contracts`
 - shared contract generation later, driven from the public OpenAPI spec
 
 ## TypeScript SDK direction
@@ -31,6 +32,17 @@ Then expand into richer modules:
 - `client.disbursements.get(...)`
 - `client.disbursements.list(...)`
 - `client.disbursements.cancel(...)`
+- `client.createEscrow(...)`
+- `client.getEscrow(...)`
+- `client.getEscrowStatus(...)`
+- `client.releaseEscrow(...)`
+- `client.fulfillEscrowTerm(...)`
+- `client.reverseEscrow(...)`
+- `client.disputeEscrow(...)`
+- `client.requestOtp(...)`
+- `client.createPayment(...)`
+- `client.getPayment(...)`
+- `client.listMerchantPayments(...)`
 - `client.escrowDisbursements.get(...)`
 - `client.escrowDisbursements.release(...)`
 - `client.escrowDisbursements.cancel(...)`
@@ -76,3 +88,4 @@ Partners should test against Piaxis behavior, not against each provider's incons
 - Store every sandbox callback and allow replay from an admin tool.
 - Keep request and webhook payload shapes identical between live and sandbox.
 - Add contract tests so the SDK always targets the same shape in both environments.
+- Keep shared fixtures in `sdks/contracts` so both language SDKs assert the same contract.

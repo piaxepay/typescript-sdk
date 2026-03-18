@@ -54,6 +54,13 @@ const batch = await piaxis.escrow_disburse({
 });
 ```
 
+## Examples
+
+- `examples/oauth-flow.mjs`
+- `examples/direct-payment.mjs`
+- `examples/escrow-flow.mjs`
+- `examples/disbursement-flow.mjs`
+
 ## Supported operations
 
 Full public `paymentAPI` coverage:
@@ -78,3 +85,10 @@ const piaxis = new PiaxisClient({
 `baseUrl` defaults to `https://api.gopiaxis.com/api`.
 
 When the sandbox deployment is ready, point `baseUrl` to the sandbox host without changing integration code.
+
+## Contract tests
+
+```bash
+npm install
+npm run test:contract
+```

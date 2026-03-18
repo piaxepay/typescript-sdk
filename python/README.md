@@ -86,3 +86,17 @@ Supported environment variables:
 - `PIAXIS_API_KEY`
 - `PIAXIS_ACCESS_TOKEN`
 - `PIAXIS_API_BASE_URL`
+
+## Examples
+
+- `examples/oauth_flow.py`
+- `examples/direct_payment.py`
+- `examples/escrow_flow.py`
+- `examples/disbursement_flow.py`
+
+## Contract tests
+
+```bash
+python3 -m compileall src
+python3 -m unittest discover -s tests -p "test_*.py"
+```

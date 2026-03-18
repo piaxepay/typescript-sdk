@@ -2,6 +2,12 @@
 
 This document shows how to publish the Piaxis SDKs for JavaScript/TypeScript and Python.
 
+The release and CI workflows already exist in:
+
+- `sdks/.github/workflows/ci.yml`
+- `sdks/.github/workflows/release-typescript.yml`
+- `sdks/.github/workflows/release-python.yml`
+
 ## Release model
 
 Use one release flow per SDK:
@@ -20,7 +26,7 @@ Recommended versioning:
 ## Before every release
 
 1. Confirm the public `/api` contract you are releasing against.
-2. Update version in the package manifest.
+2. Update the package version.
 3. Update changelog or release notes.
 4. Run local verification.
 5. Publish to the registry.
@@ -32,13 +38,12 @@ Source of truth:
 
 - `sdks/typescript`
 
-This package is implemented in TypeScript but publishes JavaScript artifacts for both JavaScript and TypeScript users.
-
 ### Prerequisites
 
-1. Node.js 20+ installed.
-2. npm account with publish access to the target package name.
-3. `NPM_TOKEN` ready if publishing from CI.
+1. Node.js 22+ installed.
+2. npm publish access to the target package name.
+3. Preferred: npm trusted publishing configured for the SDK repo.
+4. Fallback: `NPM_TOKEN` stored in GitHub Actions secrets.
 
 ### Local release steps
 
@@ -62,13 +67,15 @@ npm version patch
 
 Use `minor` or `major` when appropriate.
 
-4. Build the package:
+4. Run checks:
 
 ```bash
+npm run typecheck
+npm run test:contract
 npm run build
 ```
 
-5. Optionally inspect the packed output:
+5. Inspect the packed output:
 
 ```bash
 npm pack --dry-run
@@ -77,37 +84,25 @@ npm pack --dry-run
 6. Publish:
 
 ```bash
-npm publish --access public
+npm publish --access public --provenance
 ```
 
 ### CI publishing flow
 
-1. Store `NPM_TOKEN` in your CI secrets.
-2. Trigger on a tag like `js-sdk-v0.2.0` or on a manual release workflow.
-3. In CI:
-
-```bash
-cd sdks/typescript
-npm ci
-npm run build
-npm publish --access public
-```
-
-4. Use `.npmrc` or `NODE_AUTH_TOKEN` from CI secrets.
-
-### Recommended checks
+1. Push a tag like `sdk-js-v0.2.0`, or run `Release TypeScript SDK` manually.
+2. The workflow will:
 
 ```bash
 cd sdks/typescript
 npm install
+npm run typecheck
+npm run test:contract
 npm run build
+npm pack --dry-run
+npm publish --access public --provenance
 ```
 
-If you add tests later:
-
-```bash
-npm test
-```
+3. If trusted publishing is not configured yet, the workflow uses `NODE_AUTH_TOKEN` from `NPM_TOKEN`.
 
 ## Python SDK
 
@@ -117,9 +112,9 @@ Source of truth:
 
 ### Prerequisites
 
-1. Python 3.10+ installed.
-2. PyPI account or organization owner access.
-3. `TWINE_USERNAME` and `TWINE_PASSWORD`, or a PyPI API token.
+1. Python 3.11+ installed.
+2. Preferred: PyPI trusted publishing configured for the SDK repo.
+3. Fallback: PyPI API token or username/password credentials available for manual publishing.
 
 ### Local release steps
 
@@ -136,27 +131,35 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-3. Install packaging tools:
+3. Install build tooling:
 
 ```bash
-python3 -m pip install --upgrade build twine
+python3 -m pip install --upgrade pip build twine
+python3 -m pip install -e .
 ```
 
 4. Update the version in `pyproject.toml`.
 
-5. Build source and wheel distributions:
+5. Run checks:
+
+```bash
+python3 -m compileall src
+python3 -m unittest discover -s tests -p "test_*.py"
+```
+
+6. Build source and wheel distributions:
 
 ```bash
 python3 -m build
 ```
 
-6. Validate the package metadata:
+7. Validate the package metadata:
 
 ```bash
 python3 -m twine check dist/*
 ```
 
-7. Publish:
+8. Publish:
 
 ```bash
 python3 -m twine upload dist/*
@@ -164,30 +167,27 @@ python3 -m twine upload dist/*
 
 ### CI publishing flow
 
-1. Store PyPI credentials in CI secrets.
-2. Trigger on a tag like `py-sdk-v0.2.0` or on a manual release workflow.
-3. In CI:
+1. Push a tag like `sdk-py-v0.2.0`, or run `Release Python SDK` manually.
+2. The workflow will:
 
 ```bash
 cd sdks/python
-python3 -m pip install --upgrade build twine
+python3 -m pip install --upgrade pip build twine
+python3 -m pip install -e .
+python3 -m compileall src
+python3 -m unittest discover -s tests -p "test_*.py"
 python3 -m build
 python3 -m twine check dist/*
-python3 -m twine upload dist/*
 ```
 
-### Recommended checks
+3. The publish step uses `pypa/gh-action-pypi-publish`.
 
-```bash
-cd sdks/python
-python3 -m compileall src
-```
+## CI expectations
 
-If you add tests later:
+The shared CI workflow should stay green before any release:
 
-```bash
-pytest
-```
+- TypeScript: `npm run typecheck`, `npm run test:contract`, `npm run build`
+- Python: `python3 -m compileall src`, `python3 -m unittest discover -s tests -p "test_*.py"`
 
 ## Registry and naming guidance
 
@@ -214,5 +214,5 @@ Or if you want one coordinated release:
 1. Verify the package appears on npm or PyPI.
 2. Install it in a clean sample project.
 3. Run a real request against sandbox.
-4. Confirm the README examples still work.
+4. Confirm the example files still work.
 5. Announce the release with install and upgrade notes.

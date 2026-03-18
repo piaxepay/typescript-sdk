@@ -18,7 +18,9 @@
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:contract": "node ./scripts/run-contract-tests.cjs",
+    "prepublishOnly": "npm run typecheck && npm run test:contract && npm run build"
   },
   "devDependencies": {
     "tsup": "^8.3.0",
