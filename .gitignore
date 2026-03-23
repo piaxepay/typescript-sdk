@@ -1,11 +1,5 @@
-typescript/node_modules/
-typescript/dist/
-typescript/.contract-test-build/*
-!typescript/.contract-test-build/package.json
-python/.venv/
-python/dist/
-python/build/
-python/*.egg-info/
-**/__pycache__/
-*.pyc
-
+node_modules/
+dist/
+.npm-cache/
+.contract-test-build/*
+!.contract-test-build/package.json

@@ -5,7 +5,7 @@ const path = require("node:path");
 
 const fixtures = JSON.parse(
   fs.readFileSync(
-    path.resolve(__dirname, "..", "..", "contracts", "payment-api-fixtures.json"),
+    path.resolve(__dirname, "..", "contracts", "payment-api-fixtures.json"),
     "utf8"
   )
 );

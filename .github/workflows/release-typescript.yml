@@ -3,7 +3,7 @@ name: Release TypeScript SDK
 on:
   push:
     tags:
-      - "sdk-js-v*"
+      - "v*"
   workflow_dispatch:
     inputs:
       publish:
@@ -19,17 +19,15 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: typescript
+    environment: npm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Type check
         run: npm run typecheck
       - name: Run contract tests
@@ -37,9 +35,7 @@ jobs:
       - name: Build package
         run: npm run build
       - name: Inspect package
-        run: npm pack --dry-run
+        run: npm run pack:check
       - name: Publish to npm
         if: github.event_name == 'push' || inputs.publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public --provenance
