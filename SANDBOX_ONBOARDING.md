@@ -39,5 +39,5 @@ console.log(authorizeUrl);
 
 ## Related Resources
 
-- API docs: `https://docs.gopiaxis.com/api/payments/`
+- API docs: `https://api.gopiaxis.com/api/docs/`
 - Python SDK: `https://github.com/piaxepay/python-sdk`

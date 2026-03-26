@@ -4,7 +4,7 @@ Official JavaScript and TypeScript SDK for the Piaxis partner/payments API.
 
 - Package: `@piaxis/sdk`
 - Repository: `https://github.com/piaxepay/typescript-sdk`
-- REST API docs: `https://docs.gopiaxis.com/api/payments/`
+- REST API docs: `https://api.gopiaxis.com/api/docs/`
 - Python SDK: `https://github.com/piaxepay/python-sdk`
 
 ## What this SDK covers
@@ -21,7 +21,7 @@ It currently covers:
 - Escrow disbursements
 - Shared transport concerns like auth headers, timeouts, abort signals, and structured API errors
 
-It does not attempt to wrap every backend endpoint in `piaxis-api`, such as internal dashboard, admin, or other non-public surfaces. A few advanced raw REST fields are also not yet promoted into the typed top-level SDK inputs. For anything outside the typed SDK surface, use the raw REST documentation at `https://docs.gopiaxis.com/api/payments/`.
+It does not attempt to wrap every backend endpoint in `piaxis-api`, such as internal dashboard, admin, or other non-public surfaces. A few advanced raw REST fields are also not yet promoted into the typed top-level SDK inputs. For anything outside the typed SDK surface, use the raw REST documentation at `https://api.gopiaxis.com/api/docs/`.
 
 ## Install
 
@@ -326,4 +326,4 @@ This sends:
 - Disbursement example: `https://github.com/piaxepay/typescript-sdk/blob/main/examples/disbursement-flow.mjs`
 - Sandbox onboarding: `https://github.com/piaxepay/typescript-sdk/blob/main/SANDBOX_ONBOARDING.md`
 - Repository architecture: `https://github.com/piaxepay/typescript-sdk/blob/main/ARCHITECTURE.md`
-- REST API docs: `https://docs.gopiaxis.com/api/payments/`
+- REST API docs: `https://api.gopiaxis.com/api/docs/`
