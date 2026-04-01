@@ -3,6 +3,7 @@
 Official JavaScript and TypeScript SDK for the Piaxis partner/payments API.
 
 - Package: `@piaxis/sdk`
+- npm: `https://www.npmjs.com/package/@piaxis/sdk`
 - Repository: `https://github.com/piaxepay/typescript-sdk`
 - REST API docs: `https://api.gopiaxis.com/api/docs/`
 - Python SDK: `https://github.com/piaxepay/python-sdk`

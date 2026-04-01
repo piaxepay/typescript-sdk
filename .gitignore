@@ -4,3 +4,4 @@ dist/
 .npm-cache/
 .contract-test-build/*
 !.contract-test-build/package.json
+.env.local
