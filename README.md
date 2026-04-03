@@ -150,6 +150,7 @@ console.log(payment);
 ```
 
 If you want to test the authorize step without a browser redirect, use `authorizeTest(...)`.
+That helper is for merchant-controlled testing only: the `redirectUri` must already be registered for the merchant, and the `x-test-request` bootstrap path is only meant for merchant owners/admins in controlled environments.
 
 ## Escrow flow
 
@@ -295,7 +296,7 @@ This sends:
 | Capability | TypeScript method | REST endpoint |
 | --- | --- | --- |
 | Build authorize URL | `buildAuthorizeUrl(...)` | `GET /authorize` |
-| Test authorize redirect | `authorizeTest(...)` | `GET /authorize` with `x-test-request: true` |
+| Test authorize redirect | `authorizeTest(...)` | `GET /authorize` with `x-test-request: true` (merchant-controlled testing only) |
 | Exchange OAuth token | `exchangeToken(...)` | `POST /token` |
 | Request OTP | `requestOtp(...)` | `POST /request-otp` |
 | Create payment | `createPayment(...)` | `POST /payments/create` |

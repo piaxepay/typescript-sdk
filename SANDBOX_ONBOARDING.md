@@ -30,6 +30,8 @@ const authorizeUrl = client.buildAuthorizeUrl({
 console.log(authorizeUrl);
 ```
 
+`redirectUri` values used in sandbox OAuth tests must already be registered for the merchant. If you use the SDK's browserless `authorizeTest(...)` helper, treat it as a merchant-admin-only test tool rather than a public client flow.
+
 ## Example Flows
 
 - `examples/oauth-flow.mjs`
