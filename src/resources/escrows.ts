@@ -1,9 +1,12 @@
 import { PiaxisHttpClient } from "../http-client";
 import {
+  asArray,
   asObject,
   booleanValue,
+  jsonObjectOrNull,
   jsonObject,
   jsonObjectArray,
+  numberValue,
   optionalString,
   serializeTerm,
   serializeUserLocation,
@@ -12,6 +15,9 @@ import {
 } from "../transforms";
 import type {
   CreateEscrowDisputeInput,
+  EscrowAllocationInput,
+  EscrowAllocationResponse,
+  EscrowAllocationSummaryResponse,
   EscrowCreateInput,
   EscrowDisputeResponse,
   EscrowReleaseResponse,
@@ -80,6 +86,8 @@ export class EscrowsResource {
         verification_code: input.verificationCode,
         verification_method: input.verificationMethod ?? "email",
         user_info: input.userInfo,
+        amount: input.amount,
+        allocation_keys: input.allocationKeys,
         force: input.force ?? false,
         reason: input.reason,
       },
@@ -121,6 +129,8 @@ export class EscrowsResource {
         verification_code: input.verificationCode,
         verification_method: input.verificationMethod ?? "email",
         user_info: input.userInfo,
+        amount: input.amount,
+        allocation_keys: input.allocationKeys,
       },
       requestOptions
     );
@@ -147,6 +157,16 @@ export class EscrowsResource {
   }
 }
 
+function serializeEscrowAllocation(allocation: EscrowAllocationInput) {
+  return {
+    allocation_key: allocation.allocationKey,
+    amount: allocation.amount,
+    seller_reference: allocation.sellerReference,
+    description: allocation.description,
+    metadata: allocation.metadata,
+  };
+}
+
 function serializeEscrowCreate(input: EscrowCreateInput) {
   return {
     receiver_id: input.receiverId,
@@ -157,6 +177,43 @@ function serializeEscrowCreate(input: EscrowCreateInput) {
     external_user_id: input.externalUserId,
     user_info: input.userInfo,
     user_location: serializeUserLocation(input.userLocation),
+    external_order_id: input.externalOrderId,
+    allocations: input.allocations?.map(serializeEscrowAllocation),
+    metadata: input.metadata,
+  };
+}
+
+function normalizeEscrowAllocationResponse(
+  payload: unknown
+): EscrowAllocationResponse {
+  const data = asObject(payload);
+
+  return {
+    allocationKey: stringValue(data.allocation_key),
+    amount: optionalString(data.amount),
+    sellerReference: optionalString(data.seller_reference),
+    description: optionalString(data.description),
+    status: stringValue(data.status),
+    statusReason: optionalString(data.status_reason),
+    statusUpdatedAt: optionalString(data.status_updated_at),
+    metadata:
+      data.metadata === undefined ? undefined : jsonObjectOrNull(data.metadata),
+  };
+}
+
+function normalizeEscrowAllocationSummaryResponse(
+  payload: unknown
+): EscrowAllocationSummaryResponse {
+  const data = asObject(payload);
+
+  return {
+    totalCount: numberValue(data.total_count),
+    pendingCount: numberValue(data.pending_count),
+    releasedCount: numberValue(data.released_count),
+    reversedCount: numberValue(data.reversed_count),
+    pendingAmount: stringValue(data.pending_amount),
+    releasedAmount: stringValue(data.released_amount),
+    reversedAmount: stringValue(data.reversed_amount),
   };
 }
 
@@ -178,6 +235,22 @@ export function normalizeEscrowResponse(payload: unknown): EscrowResponse {
     location: stringRecordOrNull(data.location),
     requiredActions: jsonObjectArray(data.required_actions),
     externalUserId: optionalString(data.external_user_id),
+    balanceEscrowIn: optionalString(data.balance_escrow_in),
+    balanceEscrowOut: optionalString(data.balance_escrow_out),
+    metadata:
+      data.metadata === undefined ? undefined : jsonObjectOrNull(data.metadata),
+    allocations:
+      data.allocations == null
+        ? data.allocations === null
+          ? null
+          : undefined
+        : asArray(data.allocations).map(normalizeEscrowAllocationResponse),
+    allocationSummary:
+      data.allocation_summary == null
+        ? data.allocation_summary === null
+          ? null
+          : undefined
+        : normalizeEscrowAllocationSummaryResponse(data.allocation_summary),
   };
 }
 
@@ -187,8 +260,21 @@ function normalizeEscrowReleaseResponse(payload: unknown): EscrowReleaseResponse
   return {
     status: stringValue(data.status),
     escrowId: stringValue(data.escrow_id),
+    amount: optionalString(data.amount),
     force: booleanValue(data.force),
     reason: optionalString(data.reason),
+    allocationKeys:
+      data.allocation_keys == null
+        ? data.allocation_keys === null
+          ? null
+          : undefined
+        : asArray(data.allocation_keys).map(stringValue),
+    allocationSummary:
+      data.allocation_summary == null
+        ? data.allocation_summary === null
+          ? null
+          : undefined
+        : normalizeEscrowAllocationSummaryResponse(data.allocation_summary),
   };
 }
 
@@ -217,7 +303,20 @@ function normalizeReverseEscrowResponse(payload: unknown): ReverseEscrowResponse
   return {
     status: stringValue(data.status),
     escrowId: stringValue(data.escrow_id),
+    amount: optionalString(data.amount),
     reason: optionalString(data.reason),
+    allocationKeys:
+      data.allocation_keys == null
+        ? data.allocation_keys === null
+          ? null
+          : undefined
+        : asArray(data.allocation_keys).map(stringValue),
+    allocationSummary:
+      data.allocation_summary == null
+        ? data.allocation_summary === null
+          ? null
+          : undefined
+        : normalizeEscrowAllocationSummaryResponse(data.allocation_summary),
   };
 }
 

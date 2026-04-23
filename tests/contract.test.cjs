@@ -177,6 +177,23 @@ test("escrow helpers cover create, read, status, fulfillment, release, reverse, 
     amount: "50000",
     currencyCode: "UGX",
     paymentMethod: "mtn",
+    externalOrderId: "order-789",
+    metadata: { channel: "marketplace" },
+    allocations: [
+      {
+        allocationKey: "seller-alpha",
+        amount: "20000",
+        sellerReference: "seller-001",
+        description: "Alpha seller settlement",
+        metadata: { sku: "SKU-ALPHA" },
+      },
+      {
+        allocationKey: "seller-beta",
+        amount: "30000",
+        sellerReference: "seller-002",
+        description: "Beta seller settlement",
+      },
+    ],
     userInfo: {
       email: "buyer@example.com",
       phone_number: "+256700000000",
@@ -187,6 +204,8 @@ test("escrow helpers cover create, read, status, fulfillment, release, reverse, 
   const fetchedEscrow = await client.getEscrow(createdEscrow.id);
   const escrowStatus = await client.getEscrowStatus(createdEscrow.id);
   const releaseResponse = await client.releaseEscrow(createdEscrow.id, {
+    amount: "20000",
+    allocationKeys: ["seller-alpha"],
     force: true,
     reason: "Manual merchant release",
   });
@@ -204,6 +223,8 @@ test("escrow helpers cover create, read, status, fulfillment, release, reverse, 
   );
   const reverseResponse = await client.reverseEscrow(createdEscrow.id, {
     reason: "Buyer cancelled order",
+    amount: "30000",
+    allocationKeys: ["seller-beta"],
   });
   const disputeResponse = await client.disputeEscrow(createdEscrow.id, {
     reason: "Goods not delivered",
@@ -211,10 +232,16 @@ test("escrow helpers cover create, read, status, fulfillment, release, reverse, 
   });
 
   assert.equal(fetchedEscrow.currencyCode, "UGX");
+  assert.equal(fetchedEscrow.balanceEscrowIn, "50000.00");
+  assert.equal(fetchedEscrow.allocations[0].allocationKey, "seller-alpha");
+  assert.equal(fetchedEscrow.allocationSummary.pendingCount, 2);
   assert.equal(escrowStatus.buyerInfo.phoneNumber, "+256700000000");
   assert.equal(releaseResponse.escrowId, createdEscrow.id);
+  assert.equal(releaseResponse.amount, "20000.00");
+  assert.deepEqual(releaseResponse.allocationKeys, ["seller-alpha"]);
   assert.equal(fulfillResponse.requiresOtherParty, true);
   assert.equal(reverseResponse.status, "reversed");
+  assert.deepEqual(reverseResponse.allocationKeys, ["seller-beta"]);
   assert.equal(disputeResponse.initiatorRole, "sender");
 
   assert.deepEqual(calls[0].body, {
@@ -223,13 +250,34 @@ test("escrow helpers cover create, read, status, fulfillment, release, reverse, 
     currency_code: "UGX",
     payment_method: "mtn",
     terms: [{ type: "manual_release", data: {} }],
+    external_order_id: "order-789",
+    allocations: [
+      {
+        allocation_key: "seller-alpha",
+        amount: "20000",
+        seller_reference: "seller-001",
+        description: "Alpha seller settlement",
+        metadata: { sku: "SKU-ALPHA" },
+      },
+      {
+        allocation_key: "seller-beta",
+        amount: "30000",
+        seller_reference: "seller-002",
+        description: "Beta seller settlement",
+      },
+    ],
+    metadata: { channel: "marketplace" },
     user_info: {
       email: "buyer@example.com",
       phone_number: "+256700000000",
       otp: "123456",
     },
   });
+  assert.equal(calls[3].body.amount, "20000");
+  assert.deepEqual(calls[3].body.allocation_keys, ["seller-alpha"]);
   assert.equal(calls[4].body.term_type, "meeting_delivery");
+  assert.equal(calls[5].body.amount, "30000");
+  assert.deepEqual(calls[5].body.allocation_keys, ["seller-beta"]);
   assert.equal(calls[6].body.initiator_role, "sender");
 });
 

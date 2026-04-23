@@ -172,6 +172,22 @@ const escrow = await client.createEscrow({
   amount: "50000",
   currencyCode: "UGX",
   paymentMethod: "mtn",
+  externalOrderId: "order-789",
+  metadata: { channel: "marketplace" },
+  allocations: [
+    {
+      allocationKey: "seller-alpha",
+      amount: "20000",
+      sellerReference: "seller-001",
+      description: "Alpha seller settlement",
+    },
+    {
+      allocationKey: "seller-beta",
+      amount: "30000",
+      sellerReference: "seller-002",
+      description: "Beta seller settlement",
+    },
+  ],
   userInfo: {
     email: "buyer@example.com",
     phone_number: "+256700000000",
@@ -183,11 +199,23 @@ const escrow = await client.createEscrow({
 console.log(await client.getEscrowStatus(escrow.id));
 console.log(
   await client.releaseEscrow(escrow.id, {
-    force: true,
-    reason: "Sandbox manual release",
+    allocationKeys: ["seller-alpha"],
+    amount: "20000",
+    reason: "Sandbox partial release for seller alpha",
   })
 );
+
+console.log(escrow.allocationSummary);
 ```
+
+For marketplace checkouts, keep ``receiverId`` pointed at the merchant account and model
+seller or fulfillment slices with ``allocations``. The API still escrows to the merchant;
+the allocation layer gives you controlled partial release and reverse behavior inside that
+single escrow.
+
+Merchants should expose those allocation states and actions in the same order-management
+view where the buyer created the order so users can easily understand what remains held,
+released, or reversed.
 
 ## Disbursement flows
 

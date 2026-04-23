@@ -39,6 +39,35 @@ export interface TermInput {
   expiryDate?: string | null;
 }
 
+export interface EscrowAllocationInput {
+  allocationKey: string;
+  amount: Amount;
+  sellerReference?: string | null;
+  description?: string | null;
+  metadata?: JsonObject | null;
+}
+
+export interface EscrowAllocationResponse {
+  allocationKey: string;
+  amount?: string | null;
+  sellerReference?: string | null;
+  description?: string | null;
+  status: string;
+  statusReason?: string | null;
+  statusUpdatedAt?: string | null;
+  metadata?: JsonObject | null;
+}
+
+export interface EscrowAllocationSummaryResponse {
+  totalCount: number;
+  pendingCount: number;
+  releasedCount: number;
+  reversedCount: number;
+  pendingAmount: string;
+  releasedAmount: string;
+  reversedAmount: string;
+}
+
 export interface OAuthAuthorizeParams {
   merchantId: string;
   externalUserId: string;
@@ -76,6 +105,9 @@ export interface EscrowCreateInput {
   externalUserId?: string | null;
   userInfo?: JsonObject | null;
   userLocation?: UserLocation | null;
+  externalOrderId?: string | null;
+  allocations?: EscrowAllocationInput[] | null;
+  metadata?: JsonObject | null;
 }
 
 export interface EscrowResponse {
@@ -93,12 +125,19 @@ export interface EscrowResponse {
   location?: Record<string, number> | null;
   requiredActions?: JsonObject[] | null;
   externalUserId?: string | null;
+  balanceEscrowIn?: string | null;
+  balanceEscrowOut?: string | null;
+  metadata?: JsonObject | null;
+  allocations?: EscrowAllocationResponse[] | null;
+  allocationSummary?: EscrowAllocationSummaryResponse | null;
 }
 
 export interface ReleaseEscrowInput {
   verificationCode?: string | null;
   verificationMethod?: string;
   userInfo?: JsonObject | null;
+  amount?: Amount | null;
+  allocationKeys?: string[] | null;
   force?: boolean;
   reason?: string | null;
 }
@@ -106,8 +145,11 @@ export interface ReleaseEscrowInput {
 export interface EscrowReleaseResponse {
   status: string;
   escrowId: string;
+  amount?: string | null;
   force: boolean;
   reason?: string | null;
+  allocationKeys?: string[] | null;
+  allocationSummary?: EscrowAllocationSummaryResponse | null;
 }
 
 export interface FulfillEscrowTermInput {
@@ -130,12 +172,17 @@ export interface ReverseEscrowInput {
   verificationCode?: string | null;
   verificationMethod?: string;
   userInfo?: JsonObject | null;
+  amount?: Amount | null;
+  allocationKeys?: string[] | null;
 }
 
 export interface ReverseEscrowResponse {
   status: string;
   escrowId: string;
+  amount?: string | null;
   reason?: string | null;
+  allocationKeys?: string[] | null;
+  allocationSummary?: EscrowAllocationSummaryResponse | null;
 }
 
 export interface CreateEscrowDisputeInput {

@@ -123,7 +123,60 @@
           "description": "Merchant will release funds manually"
         }
       ],
-      "external_user_id": null
+      "external_user_id": null,
+      "balance_escrow_in": "50000.00",
+      "balance_escrow_out": "0.00",
+      "metadata": {
+        "channel": "marketplace",
+        "external_order_id": "order-789",
+        "allocations": [
+          {
+            "allocation_key": "seller-alpha",
+            "amount": "20000.00",
+            "seller_reference": "seller-001",
+            "description": "Alpha seller settlement",
+            "status": "pending",
+            "metadata": {
+              "sku": "SKU-ALPHA"
+            }
+          },
+          {
+            "allocation_key": "seller-beta",
+            "amount": "30000.00",
+            "seller_reference": "seller-002",
+            "description": "Beta seller settlement",
+            "status": "pending"
+          }
+        ]
+      },
+      "allocations": [
+        {
+          "allocation_key": "seller-alpha",
+          "amount": "20000.00",
+          "seller_reference": "seller-001",
+          "description": "Alpha seller settlement",
+          "status": "pending",
+          "metadata": {
+            "sku": "SKU-ALPHA"
+          }
+        },
+        {
+          "allocation_key": "seller-beta",
+          "amount": "30000.00",
+          "seller_reference": "seller-002",
+          "description": "Beta seller settlement",
+          "status": "pending"
+        }
+      ],
+      "allocation_summary": {
+        "total_count": 2,
+        "pending_count": 2,
+        "released_count": 0,
+        "reversed_count": 0,
+        "pending_amount": "50000.00",
+        "released_amount": "0.00",
+        "reversed_amount": "0.00"
+      }
     }
   },
   "escrow_status": {
@@ -155,8 +208,19 @@
     "response": {
       "status": "released",
       "escrow_id": "11111111-1111-1111-1111-111111111111",
+      "amount": "20000.00",
       "force": true,
-      "reason": "Manual merchant release"
+      "reason": "Manual merchant release",
+      "allocation_keys": ["seller-alpha"],
+      "allocation_summary": {
+        "total_count": 2,
+        "pending_count": 1,
+        "released_count": 1,
+        "reversed_count": 0,
+        "pending_amount": "30000.00",
+        "released_amount": "20000.00",
+        "reversed_amount": "0.00"
+      }
     }
   },
   "escrow_fulfill_term": {
@@ -170,7 +234,18 @@
     "response": {
       "status": "reversed",
       "escrow_id": "11111111-1111-1111-1111-111111111111",
-      "reason": "Buyer cancelled order"
+      "amount": "30000.00",
+      "reason": "Buyer cancelled order",
+      "allocation_keys": ["seller-beta"],
+      "allocation_summary": {
+        "total_count": 2,
+        "pending_count": 0,
+        "released_count": 1,
+        "reversed_count": 1,
+        "pending_amount": "0.00",
+        "released_amount": "20000.00",
+        "reversed_amount": "30000.00"
+      }
     }
   },
   "escrow_dispute": {
