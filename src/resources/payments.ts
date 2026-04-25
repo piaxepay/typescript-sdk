@@ -22,21 +22,22 @@ export class PaymentsResource {
     input: PaymentCreateInput,
     options: { mfaCode?: string; requestOptions?: PiaxisRequestOptions } = {}
   ): Promise<PaymentResponse> {
+    const body: Record<string, unknown> = {
+      amount: input.amount,
+      currency: input.currency,
+      payment_method: input.paymentMethod,
+      recipient_id: input.recipientId,
+      user_info: input.userInfo,
+      products: input.products,
+      customer_pays_fees: input.customerPaysFees,
+    };
+    if (options.mfaCode !== undefined) {
+      body.mfa_code = options.mfaCode;
+    }
     const response = await this.http.post<unknown>(
       "/payments/create",
-      {
-        amount: input.amount,
-        currency: input.currency,
-        payment_method: input.paymentMethod,
-        recipient_id: input.recipientId,
-        user_info: input.userInfo,
-        products: input.products,
-        customer_pays_fees: input.customerPaysFees,
-      },
-      options.requestOptions,
-      {
-        mfa_code: options.mfaCode,
-      }
+      body,
+      options.requestOptions
     );
 
     return normalizePaymentResponse(response);

@@ -17,6 +17,7 @@ export interface PiaxisAppInfo {
 export interface PiaxisClientOptions {
   apiKey?: string;
   accessToken?: string;
+  piaxisClientId?: string;
   baseUrl?: string;
   fetch?: typeof fetch;
   timeoutMs?: number;
@@ -72,6 +73,9 @@ export interface OAuthAuthorizeParams {
   merchantId: string;
   externalUserId: string;
   redirectUri: string;
+  state?: string | null;
+  codeChallenge?: string | null;
+  codeChallengeMethod?: "S256" | "plain" | (string & {});
 }
 
 export interface TokenExchangeInput {
@@ -80,6 +84,8 @@ export interface TokenExchangeInput {
   clientId: string;
   clientSecret: string;
   grantType?: string;
+  codeVerifier?: string;
+  refreshToken?: string;
 }
 
 export interface AuthorizeTestResponse {

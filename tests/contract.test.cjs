@@ -10,7 +10,7 @@ const fixtures = JSON.parse(
   )
 );
 
-const { PiaxisClient } = require(path.resolve(
+const { PiaxisClient, generatePkcePair, verifyWebhookSignature } = require(path.resolve(
   __dirname,
   "..",
   ".contract-test-build",
@@ -25,7 +25,11 @@ function createMockFetch(responses, calls) {
       url: String(url),
       method: init.method ?? "GET",
       headers,
-      body: init.body ? JSON.parse(String(init.body)) : undefined,
+      body: init.body
+        ? headers["content-type"] === "application/x-www-form-urlencoded"
+          ? Object.fromEntries(new URLSearchParams(String(init.body)).entries())
+          : JSON.parse(String(init.body))
+        : undefined,
     });
 
     const payload = responses.shift();
@@ -54,23 +58,30 @@ test("auth helpers cover authorize and token exchange", async () => {
     merchantId: "merchant-123",
     externalUserId: "external-user-789",
     redirectUri: "https://merchant.example.com/oauth/callback",
+    state: "state-123",
+    codeChallenge: "challenge-abc",
+    codeChallengeMethod: "S256",
   });
 
   assert.equal(
     authorizeUrl,
-    "https://sandbox.api.gopiaxis.com/api/authorize?merchant_id=merchant-123&external_user_id=external-user-789&redirect_uri=https%3A%2F%2Fmerchant.example.com%2Foauth%2Fcallback"
+    "https://sandbox.api.gopiaxis.com/api/authorize?merchant_id=merchant-123&external_user_id=external-user-789&redirect_uri=https%3A%2F%2Fmerchant.example.com%2Foauth%2Fcallback&state=state-123&code_challenge=challenge-abc&code_challenge_method=S256"
   );
 
   const authorizeResponse = await client.authorizeTest({
     merchantId: "merchant-123",
     externalUserId: "external-user-789",
     redirectUri: "https://merchant.example.com/oauth/callback",
+    state: "state-123",
+    codeChallenge: "challenge-abc",
+    codeChallengeMethod: "S256",
   });
   const tokenResponse = await client.exchangeToken({
     code: "auth-code-123",
     redirectUri: "https://merchant.example.com/oauth/callback",
     clientId: "client_123",
     clientSecret: "secret_456",
+    codeVerifier: "verifier-789",
   });
 
   assert.equal(authorizeResponse.redirectUrl, fixtures.authorize_test.response.redirect_url);
@@ -87,10 +98,29 @@ test("auth helpers cover authorize and token exchange", async () => {
   const tokenCall = calls[1];
   const tokenUrlParsed = new URL(tokenCall.url);
   assert.equal(tokenCall.method, "POST");
-  assert.equal(tokenCall.body, undefined);
+  assert.equal(tokenCall.headers["content-type"], "application/x-www-form-urlencoded");
+  assert.equal(tokenCall.body.grant_type, "authorization_code");
+  assert.equal(tokenCall.body.code_verifier, "verifier-789");
   assert.equal(tokenUrlParsed.pathname, "/api/token");
-  assert.equal(tokenUrlParsed.searchParams.get("grant_type"), "authorization_code");
-  assert.equal(tokenUrlParsed.searchParams.get("client_id"), "client_123");
+  assert.equal(tokenUrlParsed.searchParams.get("grant_type"), null);
+  assert.equal(tokenUrlParsed.searchParams.get("client_id"), null);
+});
+
+test("auth helpers reject insecure redirect URIs", async () => {
+  const client = new PiaxisClient({
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    fetch: createMockFetch([], []),
+  });
+
+  assert.throws(
+    () =>
+      client.buildAuthorizeUrl({
+        merchantId: "merchant-123",
+        externalUserId: "external-user-789",
+        redirectUri: "http://merchant.example.com/oauth/callback",
+      }),
+    /redirectUri must use HTTPS unless targeting localhost\./
+  );
 });
 
 test("OTP and direct payment helpers serialize requests and normalize responses", async () => {
@@ -147,10 +177,9 @@ test("OTP and direct payment helpers serialize requests and normalize responses"
   assert.equal(calls[0].headers["api-key"], "test_api_key");
 
   const paymentCall = calls[1];
-  const paymentUrl = new URL(paymentCall.url);
   assert.equal(paymentCall.body.payment_method, "mtn");
   assert.equal(paymentCall.body.customer_pays_fees, true);
-  assert.equal(paymentUrl.searchParams.get("mfa_code"), "654321");
+  assert.equal(paymentCall.body.mfa_code, "654321");
 });
 
 test("escrow helpers cover create, read, status, fulfillment, release, reverse, and dispute", async () => {
@@ -378,4 +407,48 @@ test("escrow disbursement helpers cover create, detail, list, release, and cance
   assert.equal(released.releasedCount, 1);
   assert.equal(cancelled.cancellationReason, "Merchant cancelled batch");
   assert.equal(calls[0].body.user_location.latitude, 0.31);
+});
+
+test("security helpers cover PKCE, signed webhooks, and HTTPS-only base URLs", async () => {
+  const pair = generatePkcePair();
+  assert.equal(pair.codeChallengeMethod, "S256");
+  assert.ok(pair.codeVerifier);
+  assert.ok(pair.codeChallenge);
+
+  const crypto = require("node:crypto");
+  const body = '{"event":"payment.succeeded"}';
+  const timestamp = "1712345678";
+  const legacySignature = crypto.createHmac("sha256", "secret").update(body).digest("hex");
+  assert.equal(
+    verifyWebhookSignature({
+      rawBody: body,
+      secret: "secret",
+      signature: legacySignature,
+    }),
+    true
+  );
+
+  const v2Signature = crypto
+    .createHmac("sha256", "secret")
+    .update(`${timestamp}.${body}`)
+    .digest("hex");
+  assert.equal(
+    verifyWebhookSignature({
+      rawBody: body,
+      secret: "secret",
+      signatureV2: v2Signature,
+      timestamp,
+      toleranceSeconds: 10 ** 9,
+    }),
+    true
+  );
+
+  assert.throws(
+    () =>
+      new PiaxisClient({
+        baseUrl: "http://api.example.com/api",
+        fetch: createMockFetch([], []),
+      }),
+    /must use HTTPS/
+  );
 });

@@ -12,10 +12,14 @@ export class AuthResource {
   constructor(private readonly http: PiaxisHttpClient) {}
 
   buildAuthorizeUrl(params: OAuthAuthorizeParams): string {
+    validateRedirectUri(params.redirectUri);
     return this.http.buildUrl("/authorize", {
       merchant_id: params.merchantId,
       external_user_id: params.externalUserId,
       redirect_uri: params.redirectUri,
+      state: params.state,
+      code_challenge: params.codeChallenge,
+      code_challenge_method: params.codeChallengeMethod,
     });
   }
 
@@ -23,12 +27,16 @@ export class AuthResource {
     params: OAuthAuthorizeParams,
     requestOptions?: PiaxisRequestOptions
   ): Promise<AuthorizeTestResponse> {
+    validateRedirectUri(params.redirectUri);
     const response = await this.http.get<unknown>(
       "/authorize",
       {
         merchant_id: params.merchantId,
         external_user_id: params.externalUserId,
         redirect_uri: params.redirectUri,
+        state: params.state,
+        code_challenge: params.codeChallenge,
+        code_challenge_method: params.codeChallengeMethod,
       },
       {
         ...requestOptions,
@@ -46,21 +54,54 @@ export class AuthResource {
     input: TokenExchangeInput,
     requestOptions?: PiaxisRequestOptions
   ): Promise<TokenResponse> {
-    const response = await this.http.post<unknown>(
+    validateRedirectUri(input.redirectUri);
+    const response = await this.http.postForm<unknown>(
       "/token",
-      undefined,
-      requestOptions,
       {
         grant_type: input.grantType ?? "authorization_code",
         code: input.code,
         redirect_uri: input.redirectUri,
         client_id: input.clientId,
         client_secret: input.clientSecret,
-      }
+        code_verifier: input.codeVerifier,
+      },
+      requestOptions
     );
 
     return normalizeTokenResponse(response);
   }
+
+  async refreshToken(
+    input: Pick<TokenExchangeInput, "refreshToken" | "clientId" | "clientSecret">,
+    requestOptions?: PiaxisRequestOptions
+  ): Promise<TokenResponse> {
+    const response = await this.http.postForm<unknown>(
+      "/token",
+      {
+        grant_type: "refresh_token",
+        refresh_token: input.refreshToken,
+        client_id: input.clientId,
+        client_secret: input.clientSecret,
+      },
+      requestOptions
+    );
+
+    return normalizeTokenResponse(response);
+  }
+}
+
+function validateRedirectUri(redirectUri: string): void {
+  const url = new URL(redirectUri);
+  if (url.protocol === "https:") {
+    return;
+  }
+
+  const localhostHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+  if (url.protocol === "http:" && localhostHosts.has(url.hostname)) {
+    return;
+  }
+
+  throw new Error("redirectUri must use HTTPS unless targeting localhost.");
 }
 
 function normalizeAuthorizeTestResponse(payload: unknown): AuthorizeTestResponse {

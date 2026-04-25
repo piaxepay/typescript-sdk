@@ -71,6 +71,7 @@ export class PiaxisClient {
       ...overrides,
       apiKey,
       accessToken,
+      piaxisClientId: overrides.piaxisClientId ?? env.PIAXIS_CLIENT_ID ?? env.PIAXIS_OAUTH_CLIENT_ID,
       baseUrl: overrides.baseUrl ?? env.PIAXIS_API_BASE_URL,
     });
   }
@@ -112,6 +113,13 @@ export class PiaxisClient {
     requestOptions?: PiaxisRequestOptions
   ) {
     return this.auth.exchangeToken(input, requestOptions);
+  }
+
+  refreshToken(
+    input: Pick<TokenExchangeInput, "refreshToken" | "clientId" | "clientSecret">,
+    requestOptions?: PiaxisRequestOptions
+  ) {
+    return this.auth.refreshToken(input, requestOptions);
   }
 
   createEscrow(

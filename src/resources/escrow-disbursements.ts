@@ -73,7 +73,7 @@ export class EscrowDisbursementsResource {
     const response = await this.http.post<unknown>(
       `/escrow-disbursements/${disbursementId}/release`,
       {
-        force: input.force ?? true,
+        force: input.force ?? false,
         reason: input.reason,
         escrow_ids: input.escrowIds,
       },

@@ -43,6 +43,7 @@ Environment variables supported by `PiaxisClient.fromEnv(process.env)`:
 
 - `PIAXIS_API_KEY`
 - `PIAXIS_ACCESS_TOKEN`
+- `PIAXIS_CLIENT_ID` or `PIAXIS_OAUTH_CLIENT_ID`
 - `PIAXIS_API_BASE_URL`
 
 Base URLs:
@@ -51,6 +52,7 @@ Base URLs:
 - Production: `https://api.gopiaxis.com/api`
 
 `PiaxisClient.fromEnv(...)` requires either `PIAXIS_API_KEY` or `PIAXIS_ACCESS_TOKEN`.
+The SDK rejects non-HTTPS `baseUrl` values unless you are explicitly targeting localhost for local tests.
 
 ```bash
 export PIAXIS_API_KEY="your_sandbox_api_key"
@@ -58,7 +60,8 @@ export PIAXIS_API_BASE_URL="https://sandbox.api.gopiaxis.com/api"
 ```
 
 ```ts
-import { PiaxisClient } from "@piaxis/sdk";
+import crypto from "node:crypto";
+import { PiaxisClient, generatePkcePair } from "@piaxis/sdk";
 
 const client = PiaxisClient.fromEnv(process.env);
 ```
@@ -117,11 +120,16 @@ const baseUrl =
   process.env.PIAXIS_API_BASE_URL ?? "https://sandbox.api.gopiaxis.com/api";
 
 const authClient = new PiaxisClient({ baseUrl });
+const pkce = generatePkcePair();
+const oauthState = crypto.randomBytes(18).toString("hex");
 
 const authorizeUrl = authClient.buildAuthorizeUrl({
   merchantId: process.env.PIAXIS_MERCHANT_ID!,
   externalUserId: "customer-123",
   redirectUri: process.env.PIAXIS_REDIRECT_URI!,
+  state: oauthState,
+  codeChallenge: pkce.codeChallenge,
+  codeChallengeMethod: pkce.codeChallengeMethod,
 });
 
 console.log("redirect the customer to:", authorizeUrl);
@@ -131,6 +139,7 @@ const tokens = await authClient.exchangeToken({
   redirectUri: process.env.PIAXIS_REDIRECT_URI!,
   clientId: process.env.PIAXIS_OAUTH_CLIENT_ID!,
   clientSecret: process.env.PIAXIS_OAUTH_CLIENT_SECRET!,
+  codeVerifier: pkce.codeVerifier,
 });
 
 const payerClient = new PiaxisClient({
@@ -149,8 +158,37 @@ const payment = await payerClient.createPayment({
 console.log(payment);
 ```
 
+If the access token expires, refresh it through the same token route:
+
+```ts
+const refreshed = await authClient.refreshToken({
+  refreshToken: tokens.refreshToken,
+  clientId: process.env.PIAXIS_OAUTH_CLIENT_ID!,
+  clientSecret: process.env.PIAXIS_OAUTH_CLIENT_SECRET!,
+});
+```
+
 If you want to test the authorize step without a browser redirect, use `authorizeTest(...)`.
 That helper is for merchant-controlled testing only: the `redirectUri` must already be registered for the merchant, and the `x-test-request` bootstrap path is only meant for merchant owners/admins in controlled environments.
+`redirectUri` should use HTTPS in every real environment. Plain HTTP is only accepted for localhost development callbacks.
+
+## Security helpers
+
+The SDK ships a PKCE generator and webhook verification helper:
+
+```ts
+import { generatePkcePair, verifyWebhookSignature } from "@piaxis/sdk";
+
+const isValid = verifyWebhookSignature({
+  rawBody,
+  secret: process.env.PIAXIS_WEBHOOK_SECRET!,
+  signature: req.headers["x-piaxis-signature"] as string | undefined,
+  signatureV2: req.headers["x-piaxis-signature-v2"] as string | undefined,
+  timestamp: req.headers["x-piaxis-signature-timestamp"] as string | undefined,
+});
+```
+
+Prefer `X-piaxis-Signature-V2` plus `X-piaxis-Signature-Timestamp` when they are present; the helper falls back to the legacy signature for older deliveries.
 
 ## Escrow flow
 
@@ -326,6 +364,7 @@ This sends:
 | Build authorize URL | `buildAuthorizeUrl(...)` | `GET /authorize` |
 | Test authorize redirect | `authorizeTest(...)` | `GET /authorize` with `x-test-request: true` (merchant-controlled testing only) |
 | Exchange OAuth token | `exchangeToken(...)` | `POST /token` |
+| Refresh OAuth token | `refreshToken(...)` | `POST /token` with `grant_type=refresh_token` |
 | Request OTP | `requestOtp(...)` | `POST /request-otp` |
 | Create payment | `createPayment(...)` | `POST /payments/create` |
 | Get payment | `getPayment(...)` | `GET /payments/{payment_id}` |
@@ -345,7 +384,7 @@ This sends:
 | Legacy alias | `escrow_disburse(...)` | same as `POST /escrow-disbursements` |
 | Get escrow disbursement | `getEscrowDisbursement(...)` | `GET /escrow-disbursements/{disbursement_id}` |
 | List escrow disbursements | `listEscrowDisbursements(...)` | `GET /escrow-disbursements` |
-| Release escrow disbursement | `releaseEscrowDisbursement(...)` | `POST /escrow-disbursements/{disbursement_id}/release` |
+| Release escrow disbursement | `releaseEscrowDisbursement(...)` | `POST /escrow-disbursements/{disbursement_id}/release` (`force=false` by default) |
 | Cancel escrow disbursement | `cancelEscrowDisbursement(...)` | `POST /escrow-disbursements/{disbursement_id}/cancel` |
 
 ## Examples and references

@@ -19,7 +19,7 @@ export class PiaxisHttpClient {
       throw new Error("No fetch implementation available.");
     }
 
-    this.baseUrl = options.baseUrl.replace(/\/+$/, "");
+    this.baseUrl = validateBaseUrl(options.baseUrl);
     this.options = options;
   }
 
@@ -38,6 +38,23 @@ export class PiaxisHttpClient {
     query?: Record<string, unknown>
   ): Promise<T> {
     return this.request<T>("POST", path, { query, body, ...requestOptions });
+  }
+
+  postForm<T>(
+    path: string,
+    form: Record<string, unknown>,
+    requestOptions?: PiaxisRequestOptions,
+    query?: Record<string, unknown>
+  ): Promise<T> {
+    return this.request<T>("POST", path, {
+      query,
+      body: form,
+      headers: {
+        ...requestOptions?.headers,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      signal: requestOptions?.signal,
+    });
   }
 
   async request<T>(
@@ -62,6 +79,10 @@ export class PiaxisHttpClient {
       headers.set("Authorization", token);
     }
 
+    if (this.options.piaxisClientId) {
+      headers.set("X-piaxis-Client-ID", this.options.piaxisClientId);
+    }
+
     const appInfo = this.options.appInfo;
     if (appInfo?.name) {
       const versionSuffix = appInfo.version ? `/${appInfo.version}` : "";
@@ -70,8 +91,17 @@ export class PiaxisHttpClient {
 
     let body: string | undefined;
     if (config.body !== undefined) {
-      headers.set("Content-Type", "application/json");
-      body = JSON.stringify(config.body);
+      if (headers.get("Content-Type") === "application/x-www-form-urlencoded") {
+        const formBody = new URLSearchParams();
+        for (const [key, value] of Object.entries((config.body ?? {}) as Record<string, unknown>)) {
+          if (value === undefined || value === null) continue;
+          formBody.set(key, String(value));
+        }
+        body = formBody.toString();
+      } else {
+        headers.set("Content-Type", "application/json");
+        body = JSON.stringify(config.body);
+      }
     }
 
     const controller = new AbortController();
@@ -141,4 +171,19 @@ export class PiaxisHttpClient {
       return raw;
     }
   }
+}
+
+function validateBaseUrl(baseUrl: string): string {
+  const normalized = baseUrl.replace(/\/+$/, "");
+  const url = new URL(normalized);
+  if (url.protocol === "https:") {
+    return normalized;
+  }
+
+  const localhostHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+  if (url.protocol === "http:" && localhostHosts.has(url.hostname)) {
+    return normalized;
+  }
+
+  throw new Error("PiaxisClient baseUrl must use HTTPS unless targeting localhost.");
 }
