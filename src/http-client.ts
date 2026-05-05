@@ -13,6 +13,7 @@ interface HttpClientOptions extends PiaxisClientOptions {
 export class PiaxisHttpClient {
   private readonly baseUrl: string;
   private readonly options: HttpClientOptions;
+  private readonly errorReportingEndpoint: string;
 
   constructor(options: HttpClientOptions) {
     if (!options.fetch && typeof globalThis.fetch !== "function") {
@@ -21,6 +22,8 @@ export class PiaxisHttpClient {
 
     this.baseUrl = validateBaseUrl(options.baseUrl);
     this.options = options;
+    this.errorReportingEndpoint =
+      options.errorReporting?.endpoint ?? defaultErrorReportingEndpoint(this.baseUrl);
   }
 
   get<T>(
@@ -108,8 +111,10 @@ export class PiaxisHttpClient {
     const timeoutMs = this.options.timeoutMs ?? 30_000;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    const requestUrl = this.buildUrl(path, config.query);
+
     try {
-      const response = await fetchImpl(this.buildUrl(path, config.query), {
+      const response = await fetchImpl(requestUrl, {
         method,
         headers,
         body,
@@ -130,8 +135,11 @@ export class PiaxisHttpClient {
       return payload as T;
     } catch (error) {
       if ((error as Error).name === "AbortError") {
-        throw new Error(`Piaxis request timed out after ${timeoutMs}ms`);
+        const timeoutError = new Error(`Piaxis request timed out after ${timeoutMs}ms`);
+        this.reportSdkError(timeoutError, { method, path });
+        throw timeoutError;
       }
+      this.reportSdkError(error, { method, path });
       throw error;
     } finally {
       clearTimeout(timeoutId);
@@ -171,6 +179,91 @@ export class PiaxisHttpClient {
       return raw;
     }
   }
+
+  private reportSdkError(
+    error: unknown,
+    context: { method: string; path: string }
+  ): void {
+    const reporting = this.options.errorReporting;
+    if (!reporting?.enabled) {
+      return;
+    }
+
+    const fetchImpl = this.options.fetch ?? globalThis.fetch;
+    const parsed = normalizeError(error);
+    const status = error instanceof PiaxisApiError ? error.status : undefined;
+    const severity = status && status < 500 ? "warning" : "error";
+    const appInfo = this.options.appInfo;
+    const clientName = appInfo?.name
+      ? `${appInfo.name}${appInfo.version ? `/${appInfo.version}` : ""}`
+      : "piaxis-typescript-sdk";
+
+    void fetchImpl(this.errorReportingEndpoint, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        source: "typescript_sdk",
+        severity,
+        name: truncate(parsed.name, 255),
+        message: truncate(parsed.message, 4000),
+        stack: reporting.includeStack ? truncate(parsed.stack, 20000) : undefined,
+        path: truncate(context.path, 512),
+        platform: "typescript",
+        user_agent: clientName,
+        metadata: {
+          ...(reporting.metadata ?? {}),
+          method: context.method,
+          status,
+          code: error instanceof PiaxisApiError ? error.code : undefined,
+          request_id: error instanceof PiaxisApiError ? error.requestId : undefined,
+        },
+      }),
+    }).catch(() => undefined);
+  }
+}
+
+function normalizeError(error: unknown): {
+  name?: string;
+  message: string;
+  stack?: string;
+} {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message || String(error),
+      stack: error.stack,
+    };
+  }
+
+  if (typeof error === "string") {
+    return { message: error };
+  }
+
+  try {
+    return { message: JSON.stringify(error) || "Unknown SDK error" };
+  } catch {
+    return { message: String(error) || "Unknown SDK error" };
+  }
+}
+
+function truncate(value: string | undefined, maxLength: number): string | undefined {
+  if (!value) return undefined;
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+}
+
+function defaultErrorReportingEndpoint(baseUrl: string): string {
+  const url = new URL(baseUrl);
+  if (url.pathname.endsWith("/api")) {
+    url.pathname = `${url.pathname.slice(0, -4)}/monitoring/client-errors`;
+  } else {
+    url.pathname = "/monitoring/client-errors";
+  }
+  url.search = "";
+  url.hash = "";
+  return url.toString();
 }
 
 function validateBaseUrl(baseUrl: string): string {

@@ -14,6 +14,13 @@ export interface PiaxisAppInfo {
   version?: string;
 }
 
+export interface PiaxisErrorReportingOptions {
+  enabled?: boolean;
+  endpoint?: string;
+  includeStack?: boolean;
+  metadata?: JsonObject;
+}
+
 export interface PiaxisClientOptions {
   apiKey?: string;
   accessToken?: string;
@@ -22,6 +29,7 @@ export interface PiaxisClientOptions {
   fetch?: typeof fetch;
   timeoutMs?: number;
   appInfo?: PiaxisAppInfo;
+  errorReporting?: PiaxisErrorReportingOptions;
 }
 
 export interface PiaxisRequestOptions {

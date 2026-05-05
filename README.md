@@ -343,6 +343,11 @@ const client = new PiaxisClient({
     name: "orders-service",
     version: "1.4.0",
   },
+  errorReporting: {
+    enabled: true,
+    includeStack: false,
+    metadata: { environment: "production" },
+  },
 });
 
 const payment = await client.getPayment("payment-id", {
@@ -356,6 +361,10 @@ This sends:
 - `api-key` or `Authorization: Bearer ...`
 - `x-piaxis-sdk-client: orders-service/1.4.0` when `appInfo` is set
 - any extra headers you pass via `requestOptions`
+
+When `errorReporting.enabled` is true, failed SDK requests are reported to Piaxis
+admin diagnostics with sanitized metadata only. Stack traces are omitted unless
+`includeStack` is explicitly enabled.
 
 ## Method map
 
