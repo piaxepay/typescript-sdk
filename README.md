@@ -107,6 +107,7 @@ Notes:
 
 - Top-level SDK input fields use TypeScript casing such as `paymentMethod` and `customerPaysFees`.
 - Nested payloads like `userInfo`, `products`, and `terms[].data` are passed through and should follow the REST API field shape.
+- Money-moving POST helpers generate `X-Idempotency-Key` automatically. Pass your own key in `requestOptions.headers` when you need a merchant-side retry key.
 - Many payment methods are asynchronous. Plan for polling and webhooks instead of assuming the create call means “completed”.
 
 ## OAuth and `piaxis_external` flow
@@ -359,6 +360,8 @@ const payment = await client.getPayment("payment-id", {
 This sends:
 
 - `api-key` or `Authorization: Bearer ...`
+- `X-piaxis-Client-ID` when `PIAXIS_CLIENT_ID`/`piaxisClientId` is configured
+- `X-Idempotency-Key` on money-moving POST helpers unless you provide one
 - `x-piaxis-sdk-client: orders-service/1.4.0` when `appInfo` is set
 - any extra headers you pass via `requestOptions`
 

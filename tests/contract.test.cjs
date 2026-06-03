@@ -175,11 +175,35 @@ test("OTP and direct payment helpers serialize requests and normalize responses"
 
   assert.equal(calls[0].body.phone_number, "+256700000000");
   assert.equal(calls[0].headers["api-key"], "test_api_key");
+  assert.equal(calls[0].headers["x-idempotency-key"], undefined);
 
   const paymentCall = calls[1];
   assert.equal(paymentCall.body.payment_method, "mtn");
   assert.equal(paymentCall.body.customer_pays_fees, true);
   assert.equal(paymentCall.body.mfa_code, "654321");
+  assert.ok(paymentCall.headers["x-idempotency-key"]);
+  assert.equal(calls[2].headers["x-idempotency-key"], undefined);
+});
+
+test("money-moving POST helpers generate idempotency keys and preserve caller keys", async () => {
+  const calls = [];
+  const client = new PiaxisClient({
+    apiKey: "test_api_key",
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    fetch: createMockFetch([fixtures.payment_create.response], calls),
+  });
+
+  await client.createPayment(
+    {
+      amount: "15000",
+      currency: "UGX",
+      paymentMethod: "mtn",
+      userInfo: { phone_number: "+256700000000" },
+    },
+    { requestOptions: { headers: { "X-Idempotency-Key": "merchant-key-123" } } }
+  );
+
+  assert.equal(calls[0].headers["x-idempotency-key"], "merchant-key-123");
 });
 
 test("escrow helpers cover create, read, status, fulfillment, release, reverse, and dispute", async () => {
@@ -308,6 +332,13 @@ test("escrow helpers cover create, read, status, fulfillment, release, reverse, 
   assert.equal(calls[5].body.amount, "30000");
   assert.deepEqual(calls[5].body.allocation_keys, ["seller-beta"]);
   assert.equal(calls[6].body.initiator_role, "sender");
+  assert.ok(calls[0].headers["x-idempotency-key"]);
+  assert.equal(calls[1].headers["x-idempotency-key"], undefined);
+  assert.equal(calls[2].headers["x-idempotency-key"], undefined);
+  assert.ok(calls[3].headers["x-idempotency-key"]);
+  assert.ok(calls[4].headers["x-idempotency-key"]);
+  assert.ok(calls[5].headers["x-idempotency-key"]);
+  assert.equal(calls[6].headers["x-idempotency-key"], undefined);
 });
 
 test("disbursement helpers cover create, detail, list, and cancel", async () => {
@@ -353,6 +384,10 @@ test("disbursement helpers cover create, detail, list, and cancel", async () => 
   assert.equal(list.results[0].disbursementId, disbursement.disbursementId);
   assert.equal(cancelled.status, "cancelled");
   assert.equal(calls[0].body.recipients[1].phone_number, "+256711111111");
+  assert.ok(calls[0].headers["x-idempotency-key"]);
+  assert.equal(calls[1].headers["x-idempotency-key"], undefined);
+  assert.equal(calls[2].headers["x-idempotency-key"], undefined);
+  assert.ok(calls[3].headers["x-idempotency-key"]);
 });
 
 test("escrow disbursement helpers cover create, detail, list, release, and cancel", async () => {
@@ -407,6 +442,11 @@ test("escrow disbursement helpers cover create, detail, list, release, and cance
   assert.equal(released.releasedCount, 1);
   assert.equal(cancelled.cancellationReason, "Merchant cancelled batch");
   assert.equal(calls[0].body.user_location.latitude, 0.31);
+  assert.ok(calls[0].headers["x-idempotency-key"]);
+  assert.equal(calls[1].headers["x-idempotency-key"], undefined);
+  assert.equal(calls[2].headers["x-idempotency-key"], undefined);
+  assert.ok(calls[3].headers["x-idempotency-key"]);
+  assert.ok(calls[4].headers["x-idempotency-key"]);
 });
 
 test("security helpers cover PKCE, signed webhooks, and HTTPS-only base URLs", async () => {

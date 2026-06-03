@@ -10,6 +10,13 @@ interface HttpClientOptions extends PiaxisClientOptions {
   baseUrl: string;
 }
 
+const MONEY_MOVING_POST_PATHS = new Set([
+  "/payments/create",
+  "/escrows/",
+  "/disbursements",
+  "/escrow-disbursements",
+]);
+
 export class PiaxisHttpClient {
   private readonly baseUrl: string;
   private readonly options: HttpClientOptions;
@@ -90,6 +97,10 @@ export class PiaxisHttpClient {
     if (appInfo?.name) {
       const versionSuffix = appInfo.version ? `/${appInfo.version}` : "";
       headers.set("x-piaxis-sdk-client", `${appInfo.name}${versionSuffix}`);
+    }
+
+    if (requiresIdempotencyKey(method, path) && !headers.has("X-Idempotency-Key")) {
+      headers.set("X-Idempotency-Key", generateIdempotencyKey());
     }
 
     let body: string | undefined;
@@ -223,6 +234,60 @@ export class PiaxisHttpClient {
       }),
     }).catch(() => undefined);
   }
+}
+
+function requiresIdempotencyKey(method: string, path: string): boolean {
+  if (method.toUpperCase() !== "POST") return false;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (MONEY_MOVING_POST_PATHS.has(normalizedPath)) return true;
+
+  const parts = normalizedPath.split("/").filter(Boolean);
+  if (parts.length === 3 && parts[0] === "disbursements" && parts[2] === "cancel") {
+    return true;
+  }
+  if (parts.length === 3 && parts[0] === "escrows" && ["release", "reverse"].includes(parts[2])) {
+    return true;
+  }
+  if (
+    parts.length === 5 &&
+    parts[0] === "escrows" &&
+    parts[2] === "terms" &&
+    parts[4] === "fulfill"
+  ) {
+    return true;
+  }
+  if (
+    parts.length === 3 &&
+    parts[0] === "escrow-disbursements" &&
+    ["release", "cancel"].includes(parts[2])
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function generateIdempotencyKey(): string {
+  const cryptoApi = globalThis.crypto;
+  if (typeof cryptoApi?.randomUUID === "function") {
+    return cryptoApi.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  if (typeof cryptoApi?.getRandomValues === "function") {
+    cryptoApi.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex
+    .slice(6, 8)
+    .join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
 }
 
 function normalizeError(error: unknown): {
