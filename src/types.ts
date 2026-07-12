@@ -398,6 +398,36 @@ export interface OtpResponse {
   otp?: string | null;
 }
 
+export interface ShopifyConnectInput {
+  storeId: string;
+  shopDomain: string;
+  /** "direct" (default) or "escrow" */
+  paymentMode?: string;
+}
+
+export interface ShopifyConnectResponse {
+  installUrl: string;
+  shopDomain: string;
+  paymentMode: string;
+}
+
+export interface ShopifyDisconnectResponse {
+  shopDomain: string;
+  status: string;
+}
+
+export interface ShopifySessionStatus {
+  sessionId: string;
+  status: string;
+  amount: string;
+  currency: string;
+  storeName: string | null;
+  shopDomain: string;
+  testMode: boolean;
+  methods: string[];
+  rejectReason: string | null;
+}
+
 export interface PaymentCreateInput {
   amount: Amount;
   currency: string;

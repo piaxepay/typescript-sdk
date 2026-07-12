@@ -369,6 +369,33 @@ When `errorReporting.enabled` is true, failed SDK requests are reported to Piaxi
 admin diagnostics with sanitized metadata only. Stack traces are omitted unless
 `includeStack` is explicitly enabled.
 
+## Shopify Payments App
+
+Businesses that also sell on Shopify can take checkout payments through
+Piaxis. The store owner starts the install and chooses where money goes:
+`direct` (store settlement) or `escrow` (held until release).
+
+```ts
+const result = await client.shopify.connect({
+  storeId: "your-piaxis-store-uuid",
+  shopDomain: "your-shop.myshopify.com",
+  paymentMode: "direct",
+});
+// Send the merchant's browser to Shopify's consent page:
+console.log(result.installUrl);
+
+// Support/reporting: check one checkout session
+const session = await client.shopify.getSession("session-uuid");
+console.log(session.status, session.amount, session.currency);
+
+// Turn it off; the stored shop token is dropped immediately
+await client.shopify.disconnect("your-shop.myshopify.com");
+```
+
+The integration is additive and server-gated: the platform must enable
+Shopify and the store needs the `shopify_payments` entitlement. Webhook and
+OAuth-callback endpoints are Shopify-facing and not part of this SDK.
+
 ## Method map
 
 | Capability | TypeScript method | REST endpoint |
@@ -398,6 +425,9 @@ admin diagnostics with sanitized metadata only. Stack traces are omitted unless
 | List escrow disbursements | `listEscrowDisbursements(...)` | `GET /escrow-disbursements` |
 | Release escrow disbursement | `releaseEscrowDisbursement(...)` | `POST /escrow-disbursements/{disbursement_id}/release` (`force=false` by default) |
 | Cancel escrow disbursement | `cancelEscrowDisbursement(...)` | `POST /escrow-disbursements/{disbursement_id}/cancel` |
+| Connect Shopify shop | `client.shopify.connect(...)` | `POST /platforms/shopify/connect` |
+| Disconnect Shopify shop | `client.shopify.disconnect(...)` | `DELETE /platforms/shopify/connect/{shop_domain}` |
+| Get Shopify session status | `client.shopify.getSession(...)` | `GET /platforms/shopify/sessions/{session_id}` |
 
 ## Examples and references
 

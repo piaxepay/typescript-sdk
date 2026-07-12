@@ -5,6 +5,7 @@ import { EscrowDisbursementsResource } from "./resources/escrow-disbursements";
 import { PiaxisHttpClient } from "./http-client";
 import { OtpResource } from "./resources/otp";
 import { PaymentsResource } from "./resources/payments";
+import { ShopifyResource } from "./resources/shopify";
 import type {
   CancelDisbursementInput,
   CreateEscrowDisputeInput,
@@ -34,6 +35,7 @@ export class PiaxisClient {
   readonly disbursements: DisbursementsResource;
   readonly otp: OtpResource;
   readonly payments: PaymentsResource;
+  readonly shopify: ShopifyResource;
   readonly escrowDisbursements: EscrowDisbursementsResource;
 
   private readonly http: PiaxisHttpClient;
@@ -49,6 +51,7 @@ export class PiaxisClient {
     this.disbursements = new DisbursementsResource(this.http);
     this.otp = new OtpResource(this.http);
     this.payments = new PaymentsResource(this.http);
+    this.shopify = new ShopifyResource(this.http);
     this.escrowDisbursements = new EscrowDisbursementsResource(this.http);
   }
 

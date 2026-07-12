@@ -492,3 +492,59 @@ test("security helpers cover PKCE, signed webhooks, and HTTPS-only base URLs", a
     /must use HTTPS/
   );
 });
+
+
+test("shopify helpers cover connect, disconnect, and session status", async () => {
+  const calls = [];
+  const client = new PiaxisClient({
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    apiKey: "key",
+    fetch: createMockFetch(
+      [
+        {
+          install_url: "https://demo.myshopify.com/admin/oauth/authorize?x=1",
+          shop_domain: "demo.myshopify.com",
+          payment_mode: "escrow",
+        },
+        { shop_domain: "demo.myshopify.com", status: "disabled" },
+        {
+          session_id: "s-1",
+          status: "resolved",
+          amount: "10000.00",
+          currency: "UGX",
+          store_name: "Demo Store",
+          shop_domain: "demo.myshopify.com",
+          test_mode: true,
+          methods: ["mtn", "airtel"],
+          reject_reason: null,
+        },
+      ],
+      calls
+    ),
+  });
+
+  const connect = await client.shopify.connect({
+    storeId: "store-1",
+    shopDomain: "demo.myshopify.com",
+    paymentMode: "escrow",
+  });
+  assert.equal(connect.paymentMode, "escrow");
+  assert.match(connect.installUrl, /admin\/oauth\/authorize/);
+  assert.equal(calls[0].method, "POST");
+  assert.match(calls[0].url, /\/platforms\/shopify\/connect$/);
+  assert.equal(calls[0].body.shop_domain, "demo.myshopify.com");
+  assert.equal(calls[0].body.payment_mode, "escrow");
+
+  const disconnect = await client.shopify.disconnect("demo.myshopify.com");
+  assert.equal(disconnect.status, "disabled");
+  assert.equal(calls[1].method, "DELETE");
+  assert.match(calls[1].url, /\/platforms\/shopify\/connect\/demo\.myshopify\.com$/);
+
+  const session = await client.shopify.getSession("s-1");
+  assert.equal(session.status, "resolved");
+  assert.equal(session.amount, "10000.00");
+  assert.deepEqual(session.methods, ["mtn", "airtel"]);
+  assert.equal(session.rejectReason, null);
+  assert.equal(calls[2].method, "GET");
+  assert.match(calls[2].url, /\/platforms\/shopify\/sessions\/s-1$/);
+});
