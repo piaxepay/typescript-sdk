@@ -548,3 +548,35 @@ test("shopify helpers cover connect, disconnect, and session status", async () =
   assert.equal(calls[2].method, "GET");
   assert.match(calls[2].url, /\/platforms\/shopify\/sessions\/s-1$/);
 });
+
+test("request timeout still applies with a caller signal, and redirects cannot carry API keys", async () => {
+  const { PiaxisHttpClient } = require(path.resolve(__dirname, "..", ".contract-test-build", "src", "http-client.js"));
+  const caller = new AbortController();
+  const client = new PiaxisHttpClient({
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    apiKey: "test-key",
+    timeoutMs: 10,
+    fetch: async (_url, init) => {
+      assert.equal(init.redirect, "error");
+      return new Promise((_, reject) => {
+        init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+      });
+    },
+  });
+  await assert.rejects(client.get("/payments/one", undefined, { signal: caller.signal }), /timed out after 10ms/);
+  assert.equal(caller.signal.aborted, false);
+});
+
+test("caller cancellation is preserved without being reported as a timeout", async () => {
+  const { PiaxisHttpClient } = require(path.resolve(__dirname, "..", ".contract-test-build", "src", "http-client.js"));
+  const caller = new AbortController();
+  caller.abort();
+  const client = new PiaxisHttpClient({
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    fetch: async (_url, init) => {
+      init.signal.throwIfAborted();
+      throw new Error("an aborted call should never reach the network");
+    },
+  });
+  await assert.rejects(client.get("/payments/one", undefined, { signal: caller.signal }), { name: "AbortError" });
+});

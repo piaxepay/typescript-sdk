@@ -118,18 +118,22 @@ export class PiaxisHttpClient {
       }
     }
 
+    const requestUrl = this.buildUrl(path, config.query);
     const controller = new AbortController();
     const timeoutMs = this.options.timeoutMs ?? 30_000;
+    const abortFromCaller = () => controller.abort(config.signal?.reason);
+    if (config.signal?.aborted) abortFromCaller();
+    else config.signal?.addEventListener("abort", abortFromCaller, { once: true });
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    const requestUrl = this.buildUrl(path, config.query);
 
     try {
       const response = await fetchImpl(requestUrl, {
         method,
         headers,
         body,
-        signal: config.signal ?? controller.signal,
+        signal: controller.signal,
+        // Fetch preserves custom API-key headers across redirects.
+        redirect: "error",
       });
 
       const raw = await response.text();
@@ -145,7 +149,7 @@ export class PiaxisHttpClient {
 
       return payload as T;
     } catch (error) {
-      if ((error as Error).name === "AbortError") {
+      if ((error as Error).name === "AbortError" && !config.signal?.aborted) {
         const timeoutError = new Error(`Piaxis request timed out after ${timeoutMs}ms`);
         this.reportSdkError(timeoutError, { method, path });
         throw timeoutError;
@@ -154,6 +158,7 @@ export class PiaxisHttpClient {
       throw error;
     } finally {
       clearTimeout(timeoutId);
+      config.signal?.removeEventListener("abort", abortFromCaller);
     }
   }
 
