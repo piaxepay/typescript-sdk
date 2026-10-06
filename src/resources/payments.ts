@@ -30,6 +30,7 @@ export class PaymentsResource {
       user_info: input.userInfo,
       products: input.products,
       customer_pays_fees: input.customerPaysFees,
+      return_url: input.returnUrl,
     };
     if (options.mfaCode !== undefined) {
       body.mfa_code = options.mfaCode;
@@ -85,6 +86,7 @@ function normalizePaymentResponse(payload: unknown): PaymentResponse {
     status: stringValue(data.status),
     amount: stringValue(data.amount),
     currency: stringValue(data.currency),
+    paymentUrl: optionalString(data.payment_url),
   };
 }
 

@@ -436,6 +436,13 @@ export interface PaymentCreateInput {
   userInfo?: JsonObject | null;
   products?: JsonObject[] | null;
   customerPaysFees?: boolean | null;
+  /**
+   * Card checkouts only: the `https://` page the payer is sent to after the
+   * hosted card page (for Android, an App Link or a page that opens the app).
+   * Piaxis appends `payment_id` and a `status` hint; confirm the payment with
+   * `getPayment` before fulfilling.
+   */
+  returnUrl?: string | null;
 }
 
 export interface PaymentResponse {
@@ -443,6 +450,8 @@ export interface PaymentResponse {
   status: string;
   amount: string;
   currency: string;
+  /** Hosted checkout link to open in the payer's browser (card checkouts). */
+  paymentUrl?: string | null;
 }
 
 export interface PaymentDetailsResponse {
