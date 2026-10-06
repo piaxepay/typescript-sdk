@@ -39,6 +39,25 @@
       "currency": "UGX"
     }
   },
+  "payment_create_card": {
+    "request": {
+      "amount": "2000",
+      "currency": "UGX",
+      "payment_method": "card",
+      "user_info": {
+        "name": "Ada Nakato",
+        "email": "ada@example.com"
+      },
+      "return_url": "https://shop.example.com/pay/done"
+    },
+    "response": {
+      "payment_id": "pay_card_123",
+      "status": "pending",
+      "amount": "2,000.00",
+      "currency": "UGX",
+      "payment_url": "https://checkout.example.test/opaque-token"
+    }
+  },
   "payment_details": {
     "response": {
       "id": "pay_123",

@@ -185,6 +185,28 @@ test("OTP and direct payment helpers serialize requests and normalize responses"
   assert.equal(calls[2].headers["x-idempotency-key"], undefined);
 });
 
+test("card checkouts send returnUrl and expose the hosted paymentUrl", async () => {
+  const calls = [];
+  const fixture = fixtures.payment_create_card;
+  const client = new PiaxisClient({
+    apiKey: "test_api_key",
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    fetch: createMockFetch([fixture.response], calls),
+  });
+
+  const payment = await client.createPayment({
+    amount: fixture.request.amount,
+    currency: fixture.request.currency,
+    paymentMethod: "card",
+    userInfo: fixture.request.user_info,
+    returnUrl: fixture.request.return_url,
+  });
+
+  assert.deepEqual(calls[0].body, fixture.request);
+  assert.equal(payment.paymentId, "pay_card_123");
+  assert.equal(payment.paymentUrl, "https://checkout.example.test/opaque-token");
+});
+
 test("money-moving POST helpers generate idempotency keys and preserve caller keys", async () => {
   const calls = [];
   const client = new PiaxisClient({
