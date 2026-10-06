@@ -437,8 +437,8 @@ export interface PaymentCreateInput {
   products?: JsonObject[] | null;
   customerPaysFees?: boolean | null;
   /**
-   * Card checkouts only: where the payer is sent after the hosted card page,
-   * as an `https://` URL or an app link such as `myapp://payments/done`.
+   * Card checkouts only: the `https://` page the payer is sent to after the
+   * hosted card page (for Android, an App Link or a page that opens the app).
    * Piaxis appends `payment_id` and a `status` hint; confirm the payment with
    * `getPayment` before fulfilling.
    */
