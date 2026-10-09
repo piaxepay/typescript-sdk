@@ -16,6 +16,7 @@ import type {
   EscrowDisbursementListParams,
   FulfillEscrowTermInput,
   MerchantPaymentsListParams,
+  WalletTransactionsListParams,
   OAuthAuthorizeParams,
   PaymentCreateInput,
   PiaxisClientOptions,
@@ -205,6 +206,13 @@ export class PiaxisClient {
     requestOptions?: PiaxisRequestOptions
   ) {
     return this.payments.list(params, requestOptions);
+  }
+
+  listTransactions(
+    params: WalletTransactionsListParams = {},
+    requestOptions?: PiaxisRequestOptions
+  ) {
+    return this.payments.listTransactions(params, requestOptions);
   }
 
   getDisbursement(
