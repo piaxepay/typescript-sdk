@@ -602,3 +602,78 @@ test("caller cancellation is preserved without being reported as a timeout", asy
   });
   await assert.rejects(client.get("/payments/one", undefined, { signal: caller.signal }), { name: "AbortError" });
 });
+
+test("listTransactions calls GET /api/transactions with only the given filters", async () => {
+  const calls = [];
+  const client = new PiaxisClient({
+    apiKey: "test_api_key",
+    baseUrl: "https://sandbox.api.gopiaxis.com/api",
+    fetch: createMockFetch(
+      [
+        fixtures.transaction_list.response,
+        fixtures.transaction_list.response,
+        fixtures.transaction_list.response,
+      ],
+      calls
+    ),
+  });
+
+  const listing = await client.listTransactions({
+    transactionType: "merchant_credit",
+    status: "completed",
+    currency: "UGX",
+    fromDate: "2026-01-01T00:00:00Z",
+    toDate: "2026-01-31T23:59:59Z",
+    limit: 50,
+    offset: 0,
+  });
+  await client.payments.listTransactions({ currency: "USD", limit: 10 });
+  await client.listTransactions();
+
+  const first = new URL(calls[0].url);
+  assert.equal(calls[0].method, "GET");
+  assert.equal(first.origin + first.pathname, "https://sandbox.api.gopiaxis.com/api/transactions");
+  assert.deepEqual(Object.fromEntries(first.searchParams), {
+    transaction_type: "merchant_credit",
+    status: "completed",
+    currency: "UGX",
+    from_date: "2026-01-01T00:00:00Z",
+    to_date: "2026-01-31T23:59:59Z",
+    limit: "50",
+    offset: "0",
+  });
+  assert.equal(calls[0].headers["api-key"], "test_api_key");
+  assert.equal(calls[0].headers["x-idempotency-key"], undefined);
+  // Undefined filters are omitted, not sent as "undefined".
+  assert.deepEqual(Object.fromEntries(new URL(calls[1].url).searchParams), {
+    currency: "USD",
+    limit: "10",
+  });
+  assert.equal(new URL(calls[2].url).search, "");
+
+  assert.equal(listing.total, 2);
+  assert.equal(listing.offset, 0);
+  assert.equal(listing.limit, 50);
+  assert.equal(listing.results.length, 2);
+  const [credit, disbursement] = listing.results;
+  assert.deepEqual(credit, {
+    transactionId: "0f6f2a4e-6a43-4a64-9a0e-2f0c9e1b7d11",
+    transactionType: "merchant_credit",
+    status: "completed",
+    amount: "50000.00",
+    netAmount: "48750.00",
+    feeAmount: "1250.00",
+    currency: "UGX",
+    date: "2026-01-15T10:31:04Z",
+    description: null,
+    paymentMethod: "mtn",
+    externalReference: "MTN-7781203",
+    paymentId: "f530533e-3761-4cde-9c9d-88c5be6493bb",
+    paymentRequestId: null,
+    storeId: null,
+  });
+  assert.equal(disbursement.transactionType, "disbursement_sent");
+  assert.equal(disbursement.netAmount, null);
+  assert.equal(disbursement.feeAmount, null);
+  assert.equal(disbursement.description, "Weekly supplier payout");
+});
