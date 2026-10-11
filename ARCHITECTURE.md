@@ -23,6 +23,10 @@ This repository is the standalone JavaScript and TypeScript distribution for the
 - `npm run typecheck` validates TypeScript surfaces.
 - `npm run test:contract` compiles a CommonJS test build and asserts behavior against fixture data.
 - `npm run build` produces the publishable package output in `dist/`.
+- Request signing has an opt-in cross-check against the API's own validator:
+  `scripts/cross-check-api-signature.mjs` (usage in its header, after
+  `npm run test:contract`). Run it when signing or path handling changes; exit 2
+  means skipped, not passed.
 
 ## Release Discipline
 

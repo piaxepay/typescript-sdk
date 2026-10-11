@@ -1,3 +1,4 @@
+import { createHash, createHmac } from "node:crypto";
 import { PiaxisApiError } from "./errors";
 import type { PiaxisClientOptions, PiaxisRequestOptions } from "./types";
 
@@ -119,6 +120,29 @@ export class PiaxisHttpClient {
     }
 
     const requestUrl = this.buildUrl(path, config.query);
+
+    if (this.options.apiKey) {
+      // Matches piaxis-api security/external_api_auth.py: the server signs
+      // Starlette's request.url.path (no query string) and the raw body bytes.
+      // uvicorn percent-decodes the path like Python's unquote (bad escapes kept,
+      // bad UTF-8 replaced); Starlette then re-parses it, so a decoded "?" or "#"
+      // ends it and tab/CR/LF are dropped.
+      const timestamp = String(Math.floor((this.options.clock ?? Date.now)() / 1000));
+      const signedPath = new URL(requestUrl).pathname
+        .replace(/(?:%[0-9A-Fa-f]{2})+/g, (run) =>
+          new TextDecoder().decode(
+            new Uint8Array(run.slice(1).split("%").map((hex) => parseInt(hex, 16)))
+          )
+        )
+        .replace(/[\t\r\n]/g, "")
+        .split(/[?#]/)[0];
+      const bodyHash = createHash("sha256").update(body ?? "").digest("hex");
+      const payload = [method.toUpperCase(), signedPath, timestamp, bodyHash].join("\n");
+      const signature = createHmac("sha256", this.options.apiKey).update(payload).digest("hex");
+      headers.set("X-piaxis-Timestamp", timestamp);
+      headers.set("X-piaxis-Signature", `sha256=${signature}`);
+    }
+
     const controller = new AbortController();
     const timeoutMs = this.options.timeoutMs ?? 30_000;
     const abortFromCaller = () => controller.abort(config.signal?.reason);

@@ -30,6 +30,8 @@ export interface PiaxisClientOptions {
   timeoutMs?: number;
   appInfo?: PiaxisAppInfo;
   errorReporting?: PiaxisErrorReportingOptions;
+  /** Milliseconds since the Unix epoch, used for request signature timestamps. Defaults to `Date.now`. */
+  clock?: () => number;
 }
 
 export interface PiaxisRequestOptions {
