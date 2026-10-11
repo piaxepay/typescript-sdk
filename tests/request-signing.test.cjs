@@ -291,6 +291,13 @@ test("signing: verifier rejects wrong key, tampered body, and stale timestamps (
       "/api/platforms/shopify/connect/a%23b.myshopify.com", "/api/platforms/shopify/connect/a"],
     ["decoded tab/LF/CR dropped", (c) => c.shopify.disconnect("a\tb\nc\rd.myshopify.com"),
       "/api/platforms/shopify/connect/a%09b%0Ac%0Dd.myshopify.com", "/api/platforms/shopify/connect/abcd.myshopify.com"],
+    ["BOM escape kept (U+FEFF)", (c) => c.payments.get("a%EF%BB%BFb"),
+      "/api/payments/a%EF%BB%BFb", "/api/payments/a\ufeffb"],
+    ["U+FEFF in encoded shop domain kept", (c) => c.shopify.disconnect("a\ufeffb.myshopify.com"),
+      "/api/platforms/shopify/connect/a%EF%BB%BFb.myshopify.com",
+      "/api/platforms/shopify/connect/a\ufeffb.myshopify.com"],
+    ["run starting with two BOMs keeps both", (c) => c.payments.get("%EF%BB%BF%EF%BB%BFx"),
+      "/api/payments/%EF%BB%BF%EF%BB%BFx", "/api/payments/\ufeff\ufeffx"],
     ["literal %0A in raw id dropped", (c) => c.payments.get("a%0Ab"), "/api/payments/a%0Ab", "/api/payments/ab"],
   ];
   for (const [label, run, wirePath, serverPath] of cases) {

@@ -48,6 +48,7 @@ async function startServer(httpImpl) {
         PATH: "/usr/bin:/bin",
         HOME: cwd,
         PIAXE_TEST_MODE: "1",
+        PYTHONDONTWRITEBYTECODE: "1",
         PYTHONPATH: `${join(root, "scripts", "cross-check")}:${apiDir}`,
         PIAXIS_XCHECK_SECRET: secret,
         SECRET_KEY: b64(),
@@ -58,7 +59,7 @@ async function startServer(httpImpl) {
     }
   );
   let log = "";
-  const port = await new Promise((resolvePort, reject) => {
+  const started = new Promise((resolvePort, reject) => {
     const timer = setTimeout(() => reject(new Error(`uvicorn did not start:\n${log}`)), 20000);
     const onData = (chunk) => {
       log += chunk;
@@ -72,7 +73,22 @@ async function startServer(httpImpl) {
     child.stderr.on("data", onData);
     child.on("exit", (code) => reject(new Error(`uvicorn exited ${code}:\n${log}`)));
   });
-  return { child, port };
+  try {
+    return { child, port: await started };
+  } catch (error) {
+    await stopServer(child);
+    throw error;
+  }
+}
+
+// Terminate and reap the uvicorn child (SIGKILL if SIGTERM is ignored for 5 s).
+async function stopServer(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = new Promise((done) => child.once("exit", done));
+  child.kill("SIGTERM");
+  const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+  await exited;
+  clearTimeout(timer);
 }
 
 function cases(baseUrl) {
@@ -99,6 +115,9 @@ function cases(baseUrl) {
     ["DELETE shop with #", "200 OK", (c) => c.shopify.disconnect("a#b.myshopify.com")],
     ["DELETE shop with tab/LF/CR", "200 OK", (c) => c.shopify.disconnect("a\tb\nc\rd.myshopify.com")],
     ["GET id with literal %0A", "200 OK", (c) => c.payments.get("a%0Ab")],
+    ["GET id with BOM %EF%BB%BF", "200 OK", (c) => c.payments.get("a%EF%BB%BFb")],
+    ["DELETE shop with U+FEFF", "200 OK", (c) => c.shopify.disconnect("a\ufeffb.myshopify.com")],
+    ["GET id with two leading BOMs", "200 OK", (c) => c.payments.get("%EF%BB%BF%EF%BB%BFx")],
     ["NEG wrong key", "401 INVALID_REQUEST_SIGNATURE", (c) => c.payments.get("pay_123"), { apiKey: "pk_test_wrong_key" }],
     ["NEG clock skewed -10 min", "401 STALE_REQUEST_SIGNATURE", (c) => c.payments.get("pay_123"), { clock: () => Date.now() - 600_000 }],
     ["NEG clock skewed +10 min", "401 STALE_REQUEST_SIGNATURE", (c) => c.payments.get("pay_123"), { clock: () => Date.now() + 600_000 }],
@@ -132,7 +151,7 @@ async function runAll(httpImpl) {
       console.log(`${ok ? "PASS" : "FAIL"} [${httpImpl}] ${c.name}: expected ${c.expected}, got ${got} path=${JSON.stringify(observed?.body?.path)}`);
     }
   } finally {
-    child.kill("SIGTERM");
+    await stopServer(child);
   }
   return results;
 }
