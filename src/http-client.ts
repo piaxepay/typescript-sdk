@@ -125,12 +125,12 @@ export class PiaxisHttpClient {
       // Matches piaxis-api security/external_api_auth.py: the server signs
       // Starlette's request.url.path (no query string) and the raw body bytes.
       // uvicorn percent-decodes the path like Python's unquote (bad escapes kept,
-      // bad UTF-8 replaced); Starlette then re-parses it, so a decoded "?" or "#"
-      // ends it and tab/CR/LF are dropped.
+      // bad UTF-8 replaced, a BOM kept); Starlette then re-parses it, so a decoded
+      // "?" or "#" ends it and tab/CR/LF are dropped.
       const timestamp = String(Math.floor((this.options.clock ?? Date.now)() / 1000));
       const signedPath = new URL(requestUrl).pathname
         .replace(/(?:%[0-9A-Fa-f]{2})+/g, (run) =>
-          new TextDecoder().decode(
+          new TextDecoder("utf-8", { ignoreBOM: true }).decode(
             new Uint8Array(run.slice(1).split("%").map((hex) => parseInt(hex, 16)))
           )
         )
