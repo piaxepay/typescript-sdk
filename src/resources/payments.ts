@@ -13,6 +13,9 @@ import type {
   PaymentListResponse,
   PaymentResponse,
   PiaxisRequestOptions,
+  WalletTransaction,
+  WalletTransactionListResponse,
+  WalletTransactionsListParams,
 } from "../types";
 
 export class PaymentsResource {
@@ -76,6 +79,64 @@ export class PaymentsResource {
 
     return normalizePaymentListResponse(response);
   }
+
+  /** Every movement on the merchant account's wallets, newest first. */
+  async listTransactions(
+    params: WalletTransactionsListParams = {},
+    requestOptions?: PiaxisRequestOptions
+  ): Promise<WalletTransactionListResponse> {
+    const response = await this.http.get<unknown>(
+      "/transactions",
+      {
+        transaction_type: params.transactionType,
+        status: params.status,
+        currency: params.currency,
+        from_date: params.fromDate,
+        to_date: params.toDate,
+        limit: params.limit,
+        offset: params.offset,
+      },
+      requestOptions
+    );
+
+    return normalizeWalletTransactionListResponse(response);
+  }
+}
+
+function normalizeWalletTransactionListResponse(
+  payload: unknown
+): WalletTransactionListResponse {
+  const data = asObject(payload);
+
+  return {
+    total: Number(data.total ?? 0),
+    offset: Number(data.offset ?? 0),
+    limit: Number(data.limit ?? 0),
+    results: (Array.isArray(data.results) ? data.results : []).map(
+      normalizeWalletTransaction
+    ),
+  };
+}
+
+function normalizeWalletTransaction(payload: unknown): WalletTransaction {
+  const data = asObject(payload);
+
+  return {
+    transactionId: stringValue(data.transaction_id),
+    transactionType: stringValue(data.transaction_type),
+    status: stringValue(data.status),
+    amount: stringValue(data.amount),
+    netAmount: optionalString(data.net_amount) ?? null,
+    feeAmount: optionalString(data.fee_amount) ?? null,
+    currency: stringValue(data.currency),
+    date: stringValue(data.date),
+    description: optionalString(data.description) ?? null,
+    paymentMethod: optionalString(data.payment_method) ?? null,
+    externalReference: optionalString(data.external_reference) ?? null,
+    paymentId: optionalString(data.payment_id) ?? null,
+    paymentRequestId: optionalString(data.payment_request_id) ?? null,
+    storeId: optionalString(data.store_id) ?? null,
+  };
 }
 
 function normalizePaymentResponse(payload: unknown): PaymentResponse {

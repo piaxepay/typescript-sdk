@@ -479,6 +479,42 @@ export interface MerchantPaymentsListParams {
   offset?: number;
 }
 
+export interface WalletTransactionsListParams {
+  transactionType?: string;
+  status?: string;
+  currency?: string;
+  fromDate?: string;
+  toDate?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** One movement on the merchant account's wallets (GET /api/transactions). */
+export interface WalletTransaction {
+  transactionId: string;
+  transactionType: string;
+  status: string;
+  amount: string;
+  /** What reached the wallet after fees, for payments received; otherwise null. */
+  netAmount: string | null;
+  feeAmount: string | null;
+  currency: string;
+  date: string;
+  description: string | null;
+  paymentMethod: string | null;
+  externalReference: string | null;
+  paymentId: string | null;
+  paymentRequestId: string | null;
+  storeId: string | null;
+}
+
+export interface WalletTransactionListResponse {
+  total: number;
+  offset: number;
+  limit: number;
+  results: WalletTransaction[];
+}
+
 export interface PayerInfo {
   id: string;
   email: string;

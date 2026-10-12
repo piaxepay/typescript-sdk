@@ -408,6 +408,7 @@ OAuth-callback endpoints are Shopify-facing and not part of this SDK.
 | Create payment | `createPayment(...)` | `POST /payments/create` |
 | Get payment | `getPayment(...)` | `GET /payments/{payment_id}` |
 | List merchant payments | `listMerchantPayments(...)` | `GET /merchant-payments` |
+| List wallet transactions (payments received, transfers, withdrawals, disbursements) | `listTransactions(...)` | `GET /transactions` |
 | Create escrow | `createEscrow(...)` | `POST /escrows/` |
 | Get escrow | `getEscrow(...)` | `GET /escrows/{escrow_id}` |
 | Get escrow status | `getEscrowStatus(...)` | `GET /escrows/{escrow_id}/status` |

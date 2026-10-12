@@ -436,5 +436,46 @@
       "cancelled_at": "2026-03-18T13:00:00Z",
       "cancellation_reason": "Merchant cancelled batch"
     }
+  },
+  "transaction_list": {
+    "response": {
+      "total": 2,
+      "offset": 0,
+      "limit": 50,
+      "results": [
+        {
+          "transaction_id": "0f6f2a4e-6a43-4a64-9a0e-2f0c9e1b7d11",
+          "transaction_type": "merchant_credit",
+          "status": "completed",
+          "amount": "50000.00",
+          "net_amount": "48750.00",
+          "fee_amount": "1250.00",
+          "currency": "UGX",
+          "date": "2026-01-15T10:31:04Z",
+          "description": null,
+          "payment_method": "mtn",
+          "external_reference": "MTN-7781203",
+          "payment_id": "f530533e-3761-4cde-9c9d-88c5be6493bb",
+          "payment_request_id": null,
+          "store_id": null
+        },
+        {
+          "transaction_id": "5b1c3e2a-9d4f-4c1b-8e2a-7f6d5c4b3a21",
+          "transaction_type": "disbursement_sent",
+          "status": "pending",
+          "amount": "20000.00",
+          "net_amount": null,
+          "fee_amount": null,
+          "currency": "UGX",
+          "date": "2026-01-14T08:00:00Z",
+          "description": "Weekly supplier payout",
+          "payment_method": "airtel",
+          "external_reference": null,
+          "payment_id": null,
+          "payment_request_id": null,
+          "store_id": null
+        }
+      ]
+    }
   }
 }
