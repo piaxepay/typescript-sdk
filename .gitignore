@@ -5,3 +5,4 @@ dist/
 .contract-test-build/*
 !.contract-test-build/package.json
 .env.local
+__pycache__/

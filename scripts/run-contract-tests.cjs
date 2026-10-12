@@ -5,7 +5,10 @@ const { rmSync } = require("node:fs");
 const rootDir = resolve(__dirname, "..");
 const buildDir = resolve(rootDir, ".contract-test-build", "src");
 const tsconfigPath = resolve(rootDir, "tsconfig.contract-tests.json");
-const testPath = resolve(rootDir, "tests", "contract.test.cjs");
+const testPaths = [
+  resolve(rootDir, "tests", "contract.test.cjs"),
+  resolve(rootDir, "tests", "request-signing.test.cjs"),
+];
 
 let tscPath = process.env.PIAXIS_TSC_BIN;
 if (!tscPath) {
@@ -19,7 +22,7 @@ execFileSync(process.execPath, [tscPath, "-p", tsconfigPath], {
   stdio: "inherit",
 });
 
-execFileSync(process.execPath, ["--test", testPath], {
+execFileSync(process.execPath, ["--test", ...testPaths], {
   cwd: rootDir,
   stdio: "inherit",
 });
